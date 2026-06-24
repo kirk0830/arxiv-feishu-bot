@@ -31,17 +31,14 @@ def _build_parser() -> argparse.ArgumentParser:
         prog="lark-arxivbot",
         description="Daily arXiv paper digest bot for Feishu (Lark).",
     )
-    _DEFAULT_CATEGORY_EXPR = (
-        '"physics.chem-ph"||"cond-mat.mtrl-sci"||"physics.comp-ph"'
-    )
-    _DEFAULT_KEYWORD_EXPR = (
-        '"molecular dynamics"&&'
-        '("machine learning"||"deep learning"||"neural network")'
+    from lark_arxivbot.config import (
+        ARXIV_CATEGORIES,
+        ARXIV_KEYWORDS,
     )
 
     parser.add_argument(
         "--category",
-        default=_DEFAULT_CATEGORY_EXPR,
+        default=ARXIV_CATEGORIES,
         help=(
             "arXiv category expression. "
             "See https://arxiv.org/category_taxonomy "
@@ -52,7 +49,7 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--keyword",
-        default=_DEFAULT_KEYWORD_EXPR,
+        default=ARXIV_KEYWORDS,
         help=(
             "Search keyword expression. "
             'Use "term" for literals, && for AND, || for OR. '

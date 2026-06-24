@@ -9,18 +9,14 @@ from typing import Dict, List, Optional
 # arXiv Categories
 # =============================================================================
 
-ARXIV_CATEGORIES: List[str] = [
-    "physics.chem-ph",
-    "cond-mat.mtrl-sci",
-    "physics.comp-ph",
-]
+ARXIV_CATEGORIES: str = (
+    '"physics.chem-ph"||"cond-mat.mtrl-sci"||"physics.comp-ph"'
+)
 
-ARXIV_KEYWORDS: List[str] = [
-    "molecular dynamics",
-    "machine learning",
-    "deep learning",
-    "neural network",
-]
+ARXIV_KEYWORDS: str = (
+    '"molecular dynamics"&&'
+    '("machine learning"||"deep learning"||"neural network")'
+)
 
 # =============================================================================
 # arXiv API Endpoints

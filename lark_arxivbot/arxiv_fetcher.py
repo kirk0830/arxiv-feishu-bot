@@ -368,10 +368,12 @@ def fetch_papers_from_arxiv(
     ----------
     categories : Optional[str | List[str]], optional
         Category expression or list of arXiv category strings.
-        Defaults to ``config.ARXIV_CATEGORIES`` when ``None``.
+        Defaults to ``config.ARXIV_CATEGORIES`` (expression string)
+        when ``None``.
     keywords : Optional[str | List[str]], optional
         Keyword expression or list of keywords.
-        Defaults to ``config.ARXIV_KEYWORDS`` when ``None``.
+        Defaults to ``config.ARXIV_KEYWORDS`` (expression string)
+        when ``None``.
     max_results : int, optional
         Maximum number of results to return. Defaults to 50.
     days_back : int, optional

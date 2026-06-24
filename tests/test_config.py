@@ -9,20 +9,18 @@ from typing import List
 import lark_arxivbot.config as config_module
 
 
-def test_arxiv_categories_is_list_of_str() -> None:
-    """Assert ARXIV_CATEGORIES is a non-empty List[str]."""
-    assert isinstance(config_module.ARXIV_CATEGORIES, list)
+def test_arxiv_categories_is_expression() -> None:
+    """Assert ARXIV_CATEGORIES is a non-empty expression string."""
+    assert isinstance(config_module.ARXIV_CATEGORIES, str)
     assert len(config_module.ARXIV_CATEGORIES) > 0
-    for cat in config_module.ARXIV_CATEGORIES:
-        assert isinstance(cat, str)
+    assert "physics.chem-ph" in config_module.ARXIV_CATEGORIES
 
 
-def test_arxiv_keywords_is_list_of_str() -> None:
-    """Assert ARXIV_KEYWORDS is a non-empty List[str]."""
-    assert isinstance(config_module.ARXIV_KEYWORDS, list)
+def test_arxiv_keywords_is_expression() -> None:
+    """Assert ARXIV_KEYWORDS is a non-empty expression string."""
+    assert isinstance(config_module.ARXIV_KEYWORDS, str)
     assert len(config_module.ARXIV_KEYWORDS) > 0
-    for kw in config_module.ARXIV_KEYWORDS:
-        assert isinstance(kw, str)
+    assert "molecular dynamics" in config_module.ARXIV_KEYWORDS
 
 
 def test_default_values() -> None:
