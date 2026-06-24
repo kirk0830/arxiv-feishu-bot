@@ -15,6 +15,7 @@ from lark_arxivbot.arxiv_fetcher import (
     _build_query,
     _fetch_via_arxiv_lib,
     _fetch_via_atom_api,
+    _parse_expression,
     diagnose_network_connectivity,
     fetch_papers_from_arxiv,
 )
@@ -37,6 +38,34 @@ class FakeArxivResult:
         self.entry_id = "http://arxiv.org/abs/1234.56789"
         self.pdf_url = "https://arxiv.org/pdf/1234.56789.pdf"
         self.authors = [FakeAuthor("Alice")]
+
+
+def test_parse_expression_category_or() -> None:
+    """Assert OR expression for categories."""
+    result = _parse_expression(
+        '"physics.chem-ph"||"cond-mat.mtrl-sci"',
+        "cat:",
+    )
+    assert "(cat:physics.chem-ph) OR (cat:cond-mat.mtrl-sci)" == result
+
+
+def test_parse_expression_keyword_and_or() -> None:
+    """Assert AND/OR expression for keywords."""
+    result = _parse_expression(
+        '"molecular dynamics"&&'
+        '("machine learning"||"deep learning")',
+        'all:"',
+    )
+    assert (
+        "(all:\"molecular dynamics\") AND "
+        "((all:\"machine learning\") OR (all:\"deep learning\"))"
+    ) == result
+
+
+def test_parse_expression_single_term() -> None:
+    """Assert single term expression."""
+    result = _parse_expression('"neural network"', 'all:"')
+    assert '(all:"neural network")' == result
 
 
 def test_build_query() -> None:

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 import socket
 from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
@@ -60,26 +61,66 @@ def diagnose_network_connectivity() -> Dict[str, str]:
     return results
 
 
+def _parse_expression(expression: str, prefix: str) -> str:
+    """Parse a simple Boolean expression into arXiv query syntax.
+
+    Supports ``&&`` (AND), ``||`` (OR), and parentheses.
+    Terms must be quoted with double quotes.
+
+    Parameters
+    ----------
+    expression : str
+        Input expression, e.g.
+        ``"a"&&("b"||"c")``.
+    prefix : str
+        Field prefix, e.g. ``"cat:"`` or ``'all:"'``.
+
+    Returns
+    -------
+    str
+        arXiv query snippet, e.g.
+        ``(cat:a) AND ((cat:b) OR (cat:c))``.
+    """
+    def _replace_term(match: re.Match) -> str:
+        term = match.group(1)
+        if prefix.endswith('"'):
+            return f'({prefix}{term}")'
+        return f'({prefix}{term})'
+
+    result = re.sub(r'"([^"]+)"', _replace_term, expression)
+    result = result.replace("&&", " AND ")
+    result = result.replace("||", " OR ")
+    return result
+
+
 def _build_query(
-    categories: List[str],
-    keywords: List[str],
+    categories: str | List[str],
+    keywords: str | List[str],
 ) -> str:
     """Build an arXiv search query string from categories and keywords.
 
     Parameters
     ----------
-    categories : List[str]
-        List of arXiv category strings.
-    keywords : List[str]
-        List of keywords to search in title and abstract.
+    categories : str | List[str]
+        Category expression or list of arXiv category strings.
+    keywords : str | List[str]
+        Keyword expression or list of keywords.
 
     Returns
     -------
     str
         Combined query string suitable for arXiv API.
     """
-    cat_clause = " OR ".join(f"cat:{c}" for c in categories)
-    kw_clause = " OR ".join(f'all:"{kw}"' for kw in keywords)
+    if isinstance(categories, str):
+        cat_clause = _parse_expression(categories, "cat:")
+    else:
+        cat_clause = " OR ".join(f"cat:{c}" for c in categories)
+
+    if isinstance(keywords, str):
+        kw_clause = _parse_expression(keywords, 'all:"')
+    else:
+        kw_clause = " OR ".join(f'all:"{kw}"' for kw in keywords)
+
     return f"({cat_clause}) AND ({kw_clause})"
 
 
@@ -311,8 +352,8 @@ def _fetch_via_atom_api(
 
 
 def fetch_papers_from_arxiv(
-    categories: Optional[List[str]] = None,
-    keywords: Optional[List[str]] = None,
+    categories: Optional[str | List[str]] = None,
+    keywords: Optional[str | List[str]] = None,
     max_results: int = DEFAULT_MAX_RESULTS,
     days_back: int = DEFAULT_DAYS_BACK,
     channel: str = "all",
@@ -325,12 +366,12 @@ def fetch_papers_from_arxiv(
 
     Parameters
     ----------
-    categories : Optional[List[str]], optional
-        List of arXiv category strings. Defaults to
-        ``config.ARXIV_CATEGORIES`` when ``None``.
-    keywords : Optional[List[str]], optional
-        List of keywords to search in title and abstract. Defaults to
-        ``config.ARXIV_KEYWORDS`` when ``None``.
+    categories : Optional[str | List[str]], optional
+        Category expression or list of arXiv category strings.
+        Defaults to ``config.ARXIV_CATEGORIES`` when ``None``.
+    keywords : Optional[str | List[str]], optional
+        Keyword expression or list of keywords.
+        Defaults to ``config.ARXIV_KEYWORDS`` when ``None``.
     max_results : int, optional
         Maximum number of results to return. Defaults to 50.
     days_back : int, optional

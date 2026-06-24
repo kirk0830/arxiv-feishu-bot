@@ -85,24 +85,44 @@ pixi install
 
 #### 3. Local Usage via CLI
 
-After installing dependencies, you can run the bot locally with the
-`lark-arxivbot` command.
+After installing dependencies (`pixi install`), you can run the bot
+locally in two ways.
 
-Run the default daily workflow:
+**Option A: `pixi run` (recommended)**
+
+No need to activate the environment manually. Pixi temporarily
+activates it for the command:
 
 ```bash
 pixi run lark-arxivbot
 ```
 
-Customize categories and keywords:
+**Option B: `pixi shell` (interactive)**
+
+Enter an interactive shell with the pixi environment activated, then
+run commands directly:
+
+```bash
+pixi shell
+# (inside the pixi shell)
+lark-arxivbot
+```
+
+> **Important**: Do **not** use `pixi shell && lark-arxivbot`.
+> `pixi shell` launches an interactive subshell, so `&&` will not
+> work as expected.
+
+Customize categories and keywords with Boolean expressions:
 
 ```bash
 pixi run lark-arxivbot \
-  --category physics.chem-ph \
-  --category cond-mat.mtrl-sci \
-  --keyword "molecular dynamics" \
-  --keyword "machine learning"
+  --category '"physics.bio-ph"||"cond-mat.stat-mech"' \
+  --keyword '"force field"&&"coarse-grained"'
 ```
+
+Expressions support `&&` (AND), `||` (OR), and parentheses.
+Terms must be quoted with double quotes.
+See `https://arxiv.org/category_taxonomy` for valid category values.
 
 Choose a retrieval channel:
 

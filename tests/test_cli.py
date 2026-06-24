@@ -15,6 +15,15 @@ from lark_arxivbot.config import (
 )
 
 
+_DEFAULT_CATEGORY_EXPR = (
+    '"physics.chem-ph"||"cond-mat.mtrl-sci"||"physics.comp-ph"'
+)
+_DEFAULT_KEYWORD_EXPR = (
+    '"molecular dynamics"&&'
+    '("machine learning"||"deep learning"||"neural network")'
+)
+
+
 @patch("lark_arxivbot.cli.setup_logging")
 @patch("lark_arxivbot.cli.run_daily_workflow")
 def test_cli_defaults(
@@ -25,8 +34,8 @@ def test_cli_defaults(
     main([])
 
     mock_workflow.assert_called_once_with(
-        categories=None,
-        keywords=None,
+        categories=_DEFAULT_CATEGORY_EXPR,
+        keywords=_DEFAULT_KEYWORD_EXPR,
         channel="all",
         max_results=DEFAULT_MAX_RESULTS,
         days_back=DEFAULT_DAYS_BACK,
@@ -90,9 +99,8 @@ def test_cli_passes_args_to_run_daily_workflow(
 ) -> None:
     """Assert CLI arguments are forwarded to workflow."""
     main([
-        "--category", "physics.chem-ph",
-        "--category", "cond-mat.mtrl-sci",
-        "--keyword", "machine learning",
+        "--category", '"physics.bio-ph"||"cond-mat.stat-mech"',
+        "--keyword", '"force field"&&"coarse-grained"',
         "--channel", "api",
         "--max-results", "20",
         "--days-back", "3",
@@ -100,8 +108,8 @@ def test_cli_passes_args_to_run_daily_workflow(
     ])
 
     mock_workflow.assert_called_once_with(
-        categories=["physics.chem-ph", "cond-mat.mtrl-sci"],
-        keywords=["machine learning"],
+        categories='"physics.bio-ph"||"cond-mat.stat-mech"',
+        keywords='"force field"&&"coarse-grained"',
         channel="api",
         max_results=20,
         days_back=3,

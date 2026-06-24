@@ -26,8 +26,8 @@ logger = logging.getLogger(__name__)
 
 
 def run_daily_workflow(
-    categories: Optional[List[str]] = None,
-    keywords: Optional[List[str]] = None,
+    categories: Optional[str | List[str]] = None,
+    keywords: Optional[str | List[str]] = None,
     channel: str = "all",
     max_results: int = DEFAULT_MAX_RESULTS,
     days_back: int = DEFAULT_DAYS_BACK,
@@ -45,10 +45,12 @@ def run_daily_workflow(
 
     Parameters
     ----------
-    categories : Optional[List[str]], optional
-        List of arXiv category strings. Defaults to config values.
-    keywords : Optional[List[str]], optional
-        List of search keywords. Defaults to config values.
+    categories : Optional[str | List[str]], optional
+        Category expression or list of arXiv category strings.
+        Defaults to config values.
+    keywords : Optional[str | List[str]], optional
+        Keyword expression or list of search keywords.
+        Defaults to config values.
     channel : str, optional
         Retrieval channel (``"api"``, ``"atom"``, ``"all"``).
         Defaults to ``"all"``.

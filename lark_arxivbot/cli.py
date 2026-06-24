@@ -31,17 +31,33 @@ def _build_parser() -> argparse.ArgumentParser:
         prog="lark-arxivbot",
         description="Daily arXiv paper digest bot for Feishu (Lark).",
     )
+    _DEFAULT_CATEGORY_EXPR = (
+        '"physics.chem-ph"||"cond-mat.mtrl-sci"||"physics.comp-ph"'
+    )
+    _DEFAULT_KEYWORD_EXPR = (
+        '"molecular dynamics"&&'
+        '("machine learning"||"deep learning"||"neural network")'
+    )
+
     parser.add_argument(
         "--category",
-        action="append",
-        default=None,
-        help="arXiv category (repeatable). Defaults to config.",
+        default=_DEFAULT_CATEGORY_EXPR,
+        help=(
+            "arXiv category expression. "
+            "See https://arxiv.org/category_taxonomy "
+            "for valid values. "
+            'Use "term" for literals, && for AND, || for OR. '
+            "Defaults to computational-physics categories."
+        ),
     )
     parser.add_argument(
         "--keyword",
-        action="append",
-        default=None,
-        help="Search keyword (repeatable). Defaults to config.",
+        default=_DEFAULT_KEYWORD_EXPR,
+        help=(
+            "Search keyword expression. "
+            'Use "term" for literals, && for AND, || for OR. '
+            "Defaults to MD/ML/DL/NN keywords."
+        ),
     )
     parser.add_argument(
         "--channel",
