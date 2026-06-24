@@ -24,5 +24,7 @@ jobs:
           FEISHU_SECRET: ${{ secrets.FEISHU_SECRET }}
           MAX_PAPERS: ${{ secrets.MAX_PAPERS || '10' }}
         run: pixi run lark-arxivbot \
-          --category '"physics.chem-ph"||"cond-mat.mtrl-sci"||"physics.comp-ph"' \
-          --keyword '"molecular dynamics"&&("machine learning"||"deep learning"||"neural network"||"algorithm")'
+          --category \
+            '"physics.chem-ph"||"cond-mat.mtrl-sci"||"physics.comp-ph"' \
+          --keyword \
+            '"molecular dynamics"&&("machine learning"||"deep learning"||"neural network"||"algorithm")'
