@@ -194,8 +194,15 @@ def _fetch_via_atom_api(
                 },
                 proxies=proxies if proxies else None,
                 timeout=30,
-                headers={
-                    "User-Agent": "arxiv-bot/1.0 (academic-research-bot)",
+                headers = {
+                    "User-Agent": (
+                        "Mozilla/5.0 ("
+                        "compatible; arxiv-bot/1.0; "
+                       f"mailto:{os.environ.get('USER_AGENT_EMAIL', 'your-email@example.com')}"
+                        ")" # to avoid getting blocked
+                    ),
+                    "Accept": "application/atom+xml,application/xml,text/xml,*/*",
+                    "Accept-Language": "en-US,en;q=0.9",
                 },
             )
             resp.raise_for_status()
@@ -308,11 +315,13 @@ def fetch_papers_from_arxiv(
     keywords: Optional[List[str]] = None,
     max_results: int = DEFAULT_MAX_RESULTS,
     days_back: int = DEFAULT_DAYS_BACK,
+    channel: str = "all",
 ) -> List[Dict[str, str]]:
     """Fetch yesterday's new papers from arXiv matching given criteria.
 
     Uses the official ``arxiv`` Python library as the primary path.
-    Falls back to the Atom XML API if the primary path fails.
+    Falls back to the Atom XML API if the primary path fails and
+    ``channel`` is ``"all"``.
 
     Parameters
     ----------
@@ -326,6 +335,9 @@ def fetch_papers_from_arxiv(
         Maximum number of results to return. Defaults to 50.
     days_back : int, optional
         Number of days back from today to filter. Defaults to 1.
+    channel : str, optional
+        Retrieval channel. One of ``"api"``, ``"atom"``, or ``"all"``.
+        Defaults to ``"all"``.
 
     Returns
     -------
@@ -351,6 +363,22 @@ def fetch_papers_from_arxiv(
     logger.info("Starting arXiv paper retrieval")
     logger.info(f"Target date: {target_date} (GMT)")
     logger.info(f"Query: {query}")
+    logger.info(f"Channel: {channel}")
+
+    if channel == "api":
+        try:
+            return _fetch_via_arxiv_lib(query, max_results, target_date)
+        except Exception as e:
+            logger.error(f"arxiv library path failed: {e}")
+            return []
+    elif channel == "atom":
+        try:
+            return _fetch_via_atom_api(
+                query, max_results, date_range, target_date
+            )
+        except Exception as e:
+            logger.error(f"Atom API path failed: {e}")
+            return []
 
     try:
         return _fetch_via_arxiv_lib(query, max_results, target_date)

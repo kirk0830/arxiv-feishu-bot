@@ -47,6 +47,12 @@ cards to Feishu (Lark) group chats via webhook.
   reliability.
 - **Signature Verification**: Supports Feishu webhook signature
   validation for secure messaging.
+- **CLI Interface**: Run locally with `lark-arxivbot` and customize
+  search via command-line arguments.
+- **Channel Selection**: Choose between the official arXiv library,
+  the Atom API, or automatic fallback.
+- **Availability Checks**: Pre-flight checks for network, arXiv, and
+  LLM health.
 - **Zero Infrastructure**: Runs entirely on GitHub Actions (free for
   public repositories) or Alibaba Cloud Function Compute.
 
@@ -77,7 +83,42 @@ curl -fsSL https://pixi.sh/install.sh | bash
 pixi install
 ```
 
-#### 3. Configure Secrets
+#### 3. Local Usage via CLI
+
+After installing dependencies, you can run the bot locally with the
+`lark-arxivbot` command.
+
+Run the default daily workflow:
+
+```bash
+pixi run lark-arxivbot
+```
+
+Customize categories and keywords:
+
+```bash
+pixi run lark-arxivbot \
+  --category physics.chem-ph \
+  --category cond-mat.mtrl-sci \
+  --keyword "molecular dynamics" \
+  --keyword "machine learning"
+```
+
+Choose a retrieval channel:
+
+```bash
+pixi run lark-arxivbot --channel api
+pixi run lark-arxivbot --channel atom
+```
+
+Run availability checks before starting:
+
+```bash
+pixi run lark-arxivbot --check-availability
+pixi run lark-arxivbot --check-availability --no-exit-on-failed-check
+```
+
+#### 4. Configure Secrets
 
 Navigate to **Settings** > **Secrets and variables** > **Actions** >
 **New repository secret**, and add the following secrets:
@@ -90,6 +131,7 @@ Navigate to **Settings** > **Secrets and variables** > **Actions** >
 | `FEISHU_WEBHOOK_URL` | Yes | Feishu bot webhook URL. |
 | `FEISHU_SECRET` | No | Feishu signature secret (optional). |
 | `MAX_PAPERS` | No | Max papers per day. Defaults to `10`. |
+| `USER_AGENT_EMAIL` | No | Email address for User-Agent (optional), beneficial for avoiding blocking. |
 
 #### 4. Trigger the Workflow
 
@@ -172,8 +214,15 @@ The default query targets **computational physics**, **molecular
 dynamics**, and **machine learning** papers submitted within the last
 24 hours.
 
-To customize the search scope, modify the `search_query` string in the
-`fetch_papers_from_arxiv()` function within `main.py`.
+To customize the search scope, pass `--category` and `--keyword`
+arguments to the CLI:
+
+```bash
+pixi run lark-arxivbot \
+  --category physics.bio-ph \
+  --keyword "force field" \
+  --keyword "coarse-grained"
+```
 
 #### arXiv Query Syntax Reference
 
@@ -313,7 +362,7 @@ def summarize_paper_via_llm(
 
     Returns
     -------
-    dict[str, str]
+    Dict[str, str]
         Dictionary with keys: chinese_title, chinese_abstract,
         highlights.
     """
