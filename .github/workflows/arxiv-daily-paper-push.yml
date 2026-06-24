@@ -3,7 +3,7 @@ name: arXiv Daily Paper Push
 on:
   schedule:
     # Runs daily at 01:30 UTC (09:30 Beijing Time)
-    - cron: '30 1 * * *'
+    - cron: '37 1 * * *'
   workflow_dispatch:
 
 jobs:
