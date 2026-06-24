@@ -64,17 +64,17 @@ configurations.
 Create a new public repository on GitHub (e.g.,
 `arxiv-feishu-bot`).
 
-#### 2. Upload the Code
+#### 2. Install Dependencies with Pixi
 
-Place the following files at the repository root:
+This project uses [pixi](https://pixi.sh) for reproducible dependency
+management.
 
-```text
-.
-├── main.py              # Main bot logic
-├── requirements.txt     # Python dependencies
-└── .github/
-    └── workflows/
-        └── daily-paper.yml   # GitHub Actions workflow
+```bash
+# Install pixi if you haven't already
+curl -fsSL https://pixi.sh/install.sh | bash
+
+# Install project dependencies
+pixi install
 ```
 
 #### 3. Configure Secrets
@@ -120,8 +120,8 @@ For users who prefer running within the Alibaba Cloud ecosystem.
 
 #### 2. Upload Code
 
-Upload `main.py` and `requirements.txt` via ZIP package or inline
-editor.
+Upload the project files via ZIP package or inline
+editor. Dependencies are declared in `pyproject.toml`.
 
 #### 3. Configure Environment Variables
 
@@ -273,12 +273,12 @@ maintain code quality and consistency.
 - Annotate **all** function parameters and return types.
 - Use the `|` union operator instead of `typing.Union` (PEP 604).
 - Prefer `typing.Optional` for nullable types.
-- Use `typing` generics where applicable (e.g., `list[str]`,
-  `dict[str, Any]`).
+- Use `typing` generics where applicable (e.g., `List[str]`,
+  `Dict[str, Any]`).
 
 ```python
 # Good
-def fetch_papers_from_arxiv() -> list[dict[str, str]]:
+def fetch_papers_from_arxiv() -> List[Dict[str, str]]:
     ...
 
 # Bad
@@ -297,7 +297,7 @@ def fetch_papers_from_arxiv():
 def summarize_paper_via_llm(
     title: str,
     abstract: str,
-) -> dict[str, str]:
+) -> Dict[str, str]:
     """Translate and summarize a paper abstract using an LLM.
 
     Uses standard terminology from computational chemistry and
