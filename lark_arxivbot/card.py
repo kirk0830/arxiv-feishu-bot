@@ -10,6 +10,7 @@ def build_card_from_papers(
     date_label: str,
     category: str = "",
     keyword: str = "",
+    model_name: str = "",
 ) -> Dict[str, Any]:
     """Build a Feishu interactive card from a list of paper dictionaries.
 
@@ -104,6 +105,12 @@ def build_card_from_papers(
         if idx < len(papers):
             elements.append({"tag": "hr"})
 
+    footer_text = (
+        "数据来源：arXiv | 翻译总结：AI 辅助生成 | 仅供参考"
+    )
+    if model_name:
+        footer_text += f" | 模型：{model_name}"
+
     elements.extend([
         {"tag": "hr"},
         {
@@ -111,9 +118,7 @@ def build_card_from_papers(
             "elements": [
                 {
                     "tag": "plain_text",
-                    "content": (
-                        "数据来源：arXiv | 翻译总结：AI 辅助生成 | 仅供参考"
-                    ),
+                    "content": footer_text,
                 },
             ],
         },
