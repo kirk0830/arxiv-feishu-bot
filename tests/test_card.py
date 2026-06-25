@@ -78,3 +78,36 @@ def test_build_card_elements_tags() -> None:
     assert "hr" in tags
     assert "note" in tags
     assert "action" in tags
+
+
+def test_build_card_with_query_info() -> None:
+    """Assert query expressions appear in a note element."""
+    papers: List[Dict[str, str]] = []
+    card = build_card_from_papers(
+        papers,
+        "2024-01-01",
+        category='"physics.chem-ph"||"cond-mat.mtrl-sci"',
+        keyword='"molecular dynamics"',
+    )
+
+    note_elements = [
+        e for e in card["elements"]
+        if e["tag"] == "note"
+    ]
+    assert any(
+        '"physics.chem-ph"||"cond-mat.mtrl-sci"' in str(e)
+        and '"molecular dynamics"' in str(e)
+        for e in note_elements
+    )
+
+
+def test_build_card_empty_papers() -> None:
+    """Assert a valid card is built even with zero papers."""
+    card = build_card_from_papers([], "2024-01-01")
+
+    assert "header" in card
+    assert "elements" in card
+
+    intro_elem = card["elements"][0]
+    assert intro_elem["tag"] == "div"
+    assert "0 篇相关论文" in intro_elem["text"]["content"]
