@@ -67,14 +67,15 @@ def summarize_paper_via_llm(
         "theory (DFT), potential energy surface (PES), free energy "
         "calculation, coarse-grained model, force field parameterization, "
         "neural network potential (NNP), reaction path, ensemble average, "
-        "etc."
+        "etc.\n"
+        "6. Output format must strictly use \"^|\" as delimiter."
     )
 
     user_prompt = (
         f"Paper Title: {title}\n\n"
         f"Paper Abstract: {abstract}\n\n"
-        f"Output format (strictly use | as delimiter):\n"
-        f"Chinese Title | Chinese Abstract | Highlight1; Highlight2; "
+        f"Output format (STRICTLY use \"^|\" as delimiter):\n"
+        f"Chinese Title ^| Chinese Abstract ^| Highlight1; Highlight2; "
         f"Highlight3"
     )
 
@@ -91,7 +92,7 @@ def summarize_paper_via_llm(
         )
 
         content = response.choices[0].message.content.strip()
-        parts = content.split(" | ")
+        parts = content.split("^|")
 
         if len(parts) >= 3:
             return {

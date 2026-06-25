@@ -111,3 +111,21 @@ def test_build_card_empty_papers() -> None:
     intro_elem = card["elements"][0]
     assert intro_elem["tag"] == "div"
     assert "0 篇相关论文" in intro_elem["text"]["content"]
+
+
+def test_build_card_shows_model_name() -> None:
+    """Assert footer contains the model name when provided."""
+    papers: List[Dict[str, str]] = []
+    card = build_card_from_papers(
+        papers,
+        "2024-01-01",
+        model_name="gpt-4o",
+    )
+
+    note_elements = [
+        e for e in card["elements"] if e["tag"] == "note"
+    ]
+    assert any(
+        "模型：gpt-4o" in str(e)
+        for e in note_elements
+    )

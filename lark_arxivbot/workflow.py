@@ -97,12 +97,15 @@ def run_daily_workflow(
         for paper in papers
     ]
 
+    model_name = os.environ.get("OPENAI_MODEL", "gpt-4o")
+
     today_label = datetime.now().strftime("%Y年%m月%d日")
     card = build_card_from_papers(
         processed,
         today_label,
         category=str(display_category),
         keyword=str(display_keyword),
+        model_name=model_name,
     )
 
     if push_card_to_feishu(card):
