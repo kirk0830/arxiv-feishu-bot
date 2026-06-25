@@ -14,6 +14,8 @@ from lark_arxivbot.arxiv_fetcher import (
 )
 from lark_arxivbot.card import build_card_from_papers
 from lark_arxivbot.config import (
+    ARXIV_CATEGORIES,
+    ARXIV_KEYWORDS,
     DEFAULT_DAYS_BACK,
     DEFAULT_MAX_PAPERS,
     DEFAULT_MAX_RESULTS,
@@ -67,6 +69,14 @@ def run_daily_workflow(
         diag = diagnose_network_connectivity()
         logger.info(f"Network diagnostics: {json.dumps(diag)}")
 
+    display_category = categories if categories is not None else ARXIV_CATEGORIES
+    display_keyword = keywords if keywords is not None else ARXIV_KEYWORDS
+
+    if isinstance(display_category, list):
+        display_category = " | ".join(display_category)
+    if isinstance(display_keyword, list):
+        display_keyword = " | ".join(display_keyword)
+
     papers = fetch_papers_from_arxiv(
         categories=categories,
         keywords=keywords,
@@ -74,9 +84,9 @@ def run_daily_workflow(
         days_back=days_back,
         channel=channel,
     )
+
     if not papers:
-        logger.info("No new papers today, skipping push")
-        return
+        logger.info("No new papers today")
 
     papers = papers[:max_papers]
 
@@ -88,7 +98,12 @@ def run_daily_workflow(
     ]
 
     today_label = datetime.now().strftime("%Y年%m月%d日")
-    card = build_card_from_papers(processed, today_label)
+    card = build_card_from_papers(
+        processed,
+        today_label,
+        category=str(display_category),
+        keyword=str(display_keyword),
+    )
 
     if push_card_to_feishu(card):
         logger.info(

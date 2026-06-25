@@ -8,6 +8,8 @@ from typing import Any, Dict, List
 def build_card_from_papers(
     papers: List[Dict[str, str]],
     date_label: str,
+    category: str = "",
+    keyword: str = "",
 ) -> Dict[str, Any]:
     """Build a Feishu interactive card from a list of paper dictionaries.
 
@@ -27,19 +29,28 @@ def build_card_from_papers(
     header = {
         "template": "blue",
         "title": {
-            "content": f"📚 计算物理日报 | {date_label}",
+            "content": f"📚 arXiv预印本日报 | {date_label}",
             "tag": "plain_text",
         },
     }
 
     intro = (
         f"**今日共检索到 {len(papers)} 篇相关论文**\n\n"
-        f"🔬 领域：计算物理 | 分子动力学模拟 | 机器学习\n"
-        f"📅 日期：{date_label}"
+        f" 日期：{date_label}"
     )
 
     elements: List[Dict[str, Any]] = [
         {"tag": "div", "text": {"tag": "lark_md", "content": intro}},
+        {"tag": "hr"},
+        {
+            "tag": "note",
+            "elements": [
+                {
+                    "tag": "plain_text",
+                    "content": f"检索关键词：{category} | {keyword}",
+                },
+            ],
+        },
         {"tag": "hr"},
     ]
 
