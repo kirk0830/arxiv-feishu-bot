@@ -26,7 +26,7 @@ def test_summarize_delimiter_parsing(mock_openai: MagicMock, monkeypatch) -> Non
     mock_client = MagicMock()
     mock_response = MagicMock()
     mock_response.choices = [
-        MagicMock(message=MagicMock(content="中文标题^|中文摘要^|亮点1; 亮点2"))
+        MagicMock(message=MagicMock(content="中文标题|中文摘要|亮点1; 亮点2"))
     ]
     mock_client.chat.completions.create.return_value = mock_response
     mock_openai.return_value = mock_client
