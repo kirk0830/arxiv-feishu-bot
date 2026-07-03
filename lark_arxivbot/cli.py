@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import argparse
 import logging
 import sys
@@ -38,7 +39,7 @@ def _build_parser() -> argparse.ArgumentParser:
 
     parser.add_argument(
         "--category",
-        default=ARXIV_CATEGORIES,
+        default=os.environ.get('ARXIV_CATEGORIES', ARXIV_CATEGORIES),
         help=(
             "arXiv category expression. "
             "See https://arxiv.org/category_taxonomy "
@@ -49,7 +50,7 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--keyword",
-        default=ARXIV_KEYWORDS,
+        default=os.environ.get('ARXIV_KEYWORDS', ARXIV_KEYWORDS),
         help=(
             "Search keyword expression. "
             'Use "term" for literals, && for AND, || for OR. '
