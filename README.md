@@ -11,7 +11,7 @@ and machine learning, translates and summarizes them via LLM using
 standard chemical physics terminology, and pushes formatted interactive
 cards to Feishu (Lark) group chats via webhook.
 
----
+***
 
 ## Table of Contents
 
@@ -31,7 +31,7 @@ cards to Feishu (Lark) group chats via webhook.
   - [Pythonic Patterns](#pythonic-patterns)
 - [License](#license)
 
----
+***
 
 ## Features
 
@@ -58,14 +58,26 @@ cards to Feishu (Lark) group chats via webhook.
 - **Zero Infrastructure**: Runs entirely on GitHub Actions (free for
   public repositories) or Alibaba Cloud Function Compute.
 
----
+***
 
 ## Usage
 
-### Quick Start with GitHub Actions (Recommended)
+### Register the robot
 
-The simplest way to run this bot without managing servers or network
-configurations.
+1. Select the Feishu chatgroup to add the arxiv-bot, click on the name of the chat-group
+2. In the right panel pops out after your click, find the option "Group robot"
+3. Click "Add robot" and choose the "customize robot (webhook...)"
+4. Save the webhook URL and enable the "signature verification", also save the password
+5. Click "done", then please read the following to enpower the robot
+
+### For impatient users, with this method, it is not needed to pull the code to your computer, all can be done with your Feishu (lark) and broswer.
+
+1. Fork this Repository
+2. Configure your fork by clicking the "Settings" tab, find the "Secrets and variables" on the left panel, select the "Actions"
+3. Configure "**Repository secrets**", add the secrets one-by-one, including `OPENAI_API_KEY`,`OPENAI_BASE_URL`,`OPENAI_MODEL`,`FEISHU_WEBHOOK_URL`, ... etc. See the table below for more information
+4. Enable the workflow in "Actions" tab on the top of the Github page and try to run the "arXiv daliy paper push"
+
+### Advanced (for development)
 
 #### 1. Fork or Create a Repository
 
@@ -90,7 +102,7 @@ pixi install
 After installing dependencies (`pixi install`), you can run the bot
 locally in two ways.
 
-**Option A: `pixi run` (recommended)**
+**Option A:** **`pixi run`** **(recommended)**
 
 No need to activate the environment manually. Pixi temporarily
 activates it for the command:
@@ -99,7 +111,7 @@ activates it for the command:
 pixi run lark-arxivbot
 ```
 
-**Option B: `pixi shell` (interactive)**
+**Option B:** **`pixi shell`** **(interactive)**
 
 Enter an interactive shell with the pixi environment activated, then
 run commands directly:
@@ -145,15 +157,17 @@ pixi run lark-arxivbot --check-availability --no-exit-on-failed-check
 Navigate to **Settings** > **Secrets and variables** > **Actions** >
 **New repository secret**, and add the following secrets:
 
-| Secret Name | Required | Description |
-|-------------|----------|-------------|
-| `OPENAI_API_KEY` | Yes | API key for the LLM service. |
-| `OPENAI_BASE_URL` | No | Base URL for LLM API (optional). |
-| `OPENAI_MODEL` | No | Model name (e.g., `gpt-4o`). |
-| `FEISHU_WEBHOOK_URL` | Yes | Feishu bot webhook URL. |
-| `FEISHU_SECRET` | No | Feishu signature secret (optional). |
-| `MAX_PAPERS` | No | Max papers per day. Defaults to `10`. |
-| `USER_AGENT_EMAIL` | No | Email address for User-Agent (optional), beneficial for avoiding blocking. |
+| Secret Name          | Required | Description                                                                                                                                         |
+| -------------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `OPENAI_API_KEY`     | Yes      | API key for the LLM service.                                                                                                                        |
+| `OPENAI_BASE_URL`    | No       | Base URL for LLM API (optional).                                                                                                                    |
+| `OPENAI_MODEL`       | No       | Model name (e.g., `gpt-4o`).                                                                                                                        |
+| `FEISHU_WEBHOOK_URL` | Yes      | Feishu bot webhook URL.                                                                                                                             |
+| `FEISHU_SECRET`      | No       | Feishu signature secret (optional).                                                                                                                 |
+| `MAX_PAPERS`         | No       | Max papers per day. Defaults to `10`.                                                                                                               |
+| `USER_AGENT_EMAIL`   | No       | Email address for User-Agent (optional), beneficial for avoiding blocking.                                                                          |
+| `ARXIV_CATEGORIES`   | No       | Paper categories to search everyday. Defaults to `'"physics.chem-ph"\|\|"cond-mat.mtrl-sci"\|\|"physics.comp-ph"'`                                  |
+| `ARXIV_KEYWORDS`     | No       | Paper keywords to search everyday. Defaults to `'"molecular dynamics"&&("machine learning"\|\|"deep learning"\|\|"neural network"\|\|"algorithm")'` |
 
 #### 5. Trigger the Workflow
 
@@ -165,7 +179,7 @@ run at **09:37 Beijing Time (01:37 UTC)** every day.
 
 Check your Feishu group chat for the formatted paper digest card.
 
----
+***
 
 ### Deploy to Alibaba Cloud Function Compute
 
@@ -209,26 +223,28 @@ CRON_TZ=Asia/Shanghai 30 9 * * *
 Use the **Test Function** feature to verify execution, and check
 **Invocation Logs** for debugging.
 
----
+***
 
 ## Configuration
 
 ### Environment Variables
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `OPENAI_API_KEY` | — | LLM API authentication key. |
-| `OPENAI_BASE_URL` | — | Custom LLM base URL (optional). |
-| `OPENAI_MODEL` | `gpt-4o` | LLM model identifier. |
-| `FEISHU_WEBHOOK_URL` | — | Feishu bot webhook endpoint. |
-| `FEISHU_SECRET` | — | Feishu signature secret (optional). |
-| `MAX_PAPERS` | `10` | Daily paper limit. |
-| `ARXIV_API_URL` | — | Custom arXiv API endpoint (optional). |
-| `HTTP_PROXY` | — | HTTP proxy URL (optional). |
-| `HTTPS_PROXY` | — | HTTPS proxy URL (optional). |
-| `ENABLE_NETWORK_DIAG` | `false` | Enable network diagnostics. |
+| Variable              | Default                                      | Description                           | <br />              | <br /> | <br />               | <br />                                  | <br />          | <br />                                 | <br /> | <br />                    |
+| --------------------- | -------------------------------------------- | ------------------------------------- | :------------------ | :----- | :------------------- | :-------------------------------------- | :-------------- | :------------------------------------- | :----- | :------------------------ |
+| `OPENAI_API_KEY`      | —                                            | LLM API authentication key.           | <br />              | <br /> | <br />               | <br />                                  | <br />          | <br />                                 | <br /> | <br />                    |
+| `OPENAI_BASE_URL`     | —                                            | Custom LLM base URL (optional).       | <br />              | <br /> | <br />               | <br />                                  | <br />          | <br />                                 | <br /> | <br />                    |
+| `OPENAI_MODEL`        | `gpt-4o`                                     | LLM model identifier.                 | <br />              | <br /> | <br />               | <br />                                  | <br />          | <br />                                 | <br /> | <br />                    |
+| `FEISHU_WEBHOOK_URL`  | —                                            | Feishu bot webhook endpoint.          | <br />              | <br /> | <br />               | <br />                                  | <br />          | <br />                                 | <br /> | <br />                    |
+| `FEISHU_SECRET`       | —                                            | Feishu signature secret (optional).   | <br />              | <br /> | <br />               | <br />                                  | <br />          | <br />                                 | <br /> | <br />                    |
+| `MAX_PAPERS`          | `10`                                         | Daily paper limit.                    | <br />              | <br /> | <br />               | <br />                                  | <br />          | <br />                                 | <br /> | <br />                    |
+| `ARXIV_CATEGORIES`    | \`'"physics.chem-ph"                         | <br />                                | "cond-mat.mtrl-sci" | <br /> | "physics.comp-ph"'\` | Category expression with `&&` (AND), \` | <br />          | \` (OR), and parentheses.              | <br /> | <br />                    |
+| `ARXIV_KEYWORDS`      | \`'"molecular dynamics"&&("machine learning" | <br />                                | "deep learning"     | <br /> | "neural network"     | <br />                                  | "algorithm")'\` | Keyword expression with `&&` (AND), \` | <br /> | \` (OR), and parentheses. |
+| `ARXIV_API_URL`       | —                                            | Custom arXiv API endpoint (optional). | <br />              | <br /> | <br />               | <br />                                  | <br />          | <br />                                 | <br /> | <br />                    |
+| `HTTP_PROXY`          | —                                            | HTTP proxy URL (optional).            | <br />              | <br /> | <br />               | <br />                                  | <br />          | <br />                                 | <br /> | <br />                    |
+| `HTTPS_PROXY`         | —                                            | HTTPS proxy URL (optional).           | <br />              | <br /> | <br />               | <br />                                  | <br />          | <br />                                 | <br /> | <br />                    |
+| `ENABLE_NETWORK_DIAG` | `false`                                      | Enable network diagnostics.           | <br />              | <br /> | <br />               | <br />                                  | <br />          | <br />                                 | <br /> | <br />                    |
 
----
+***
 
 ### Customizing Search Queries
 
@@ -247,15 +263,15 @@ pixi run lark-arxivbot \
 
 #### arXiv Query Syntax Reference
 
-| Prefix | Field | Example |
-|--------|-------|---------|
-| `cat:` | arXiv category | `cat:physics.chem-ph` |
-| `ti:` | Title | `ti:"neural network"` |
-| `au:` | Author | `au:del_maestro` |
-| `abs:` | Abstract | `abs:"free energy"` |
-| `all:` | All fields | `all:"molecular dynamics"` |
-| `AND` / `OR` / `ANDNOT` | Boolean operators | `cat:cond-mat AND ti:MD` |
-| `submittedDate` | Date range | `submittedDate:[START+TO+END]` |
+| Prefix                  | Field             | Example                        |
+| ----------------------- | ----------------- | ------------------------------ |
+| `cat:`                  | arXiv category    | `cat:physics.chem-ph`          |
+| `ti:`                   | Title             | `ti:"neural network"`          |
+| `au:`                   | Author            | `au:del_maestro`               |
+| `abs:`                  | Abstract          | `abs:"free energy"`            |
+| `all:`                  | All fields        | `all:"molecular dynamics"`     |
+| `AND` / `OR` / `ANDNOT` | Boolean operators | `cat:cond-mat AND ti:MD`       |
+| `submittedDate`         | Date range        | `submittedDate:[START+TO+END]` |
 
 #### Example: Broaden to Biophysics and Statistical Mechanics
 
@@ -293,7 +309,7 @@ pixi run lark-arxivbot --days-back 7
 >
 > If valid Atom XML is returned, the query syntax is correct.
 
----
+***
 
 ## Code Contribution Guidelines
 
@@ -302,7 +318,7 @@ maintain code quality and consistency.
 
 ### Naming Conventions
 
-- **Variables and functions**: Use lowercase snake_case.
+- **Variables and functions**: Use lowercase snake\_case.
 - **Functions**: Follow the `verb_owner_noun` pattern (e.g.,
   `fetch_papers_from_arxiv`, `build_card_from_papers`,
   `summarize_paper_via_llm`).
@@ -398,7 +414,7 @@ processed = [
 ]
 ```
 
----
+***
 
 ## License
 
