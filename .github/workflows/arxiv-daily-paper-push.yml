@@ -23,7 +23,7 @@ jobs:
           FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
           FEISHU_SECRET: ${{ secrets.FEISHU_SECRET }}
           MAX_PAPERS: ${{ secrets.MAX_PAPERS || '10' }}
+          ARXIV_CATEGORIES: ${{ secrets.ARXIV_CATEGORIES || '"physics.chem-ph"||"cond-mat.mtrl-sci"||"physics.comp-ph"' }}
+          ARXIV_KEYWORDS: ${{ secrets.ARXIV_KEYWORDS || '"molecular dynamics"&&("machine learning"||"deep learning"||"neural network"||"algorithm")' }}
         run: |
-          pixi run lark-arxivbot \
-            --category '"physics.chem-ph"||"cond-mat.mtrl-sci"||"physics.comp-ph"' \
-            --keyword '"molecular dynamics"&&("machine learning"||"deep learning"||"neural network"||"algorithm")'
+          pixi run lark-arxivbot
