@@ -1,13 +1,13 @@
 
 <div align="right">
 
-**English** | [中文](docs/README.zh-CN.md)
+**English** | [中文](README.zh-CN.md)
 
 </div>
 
 # arXiv Daily Paper Bot for Feishu (Lark)
 
-<img src="docs/assets/arxivbot-logo.png" alt="arXiv Bot Logo" width="200">
+<img src="assets/arxivbot-logo.png" alt="arXiv Bot Logo" width="200">
 
 Automatically fetch the latest arXiv papers every day, translate and
 summarize them with AI, and push formatted interactive cards to your
