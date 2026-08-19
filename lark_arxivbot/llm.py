@@ -2,13 +2,162 @@
 
 from __future__ import annotations
 
+import json
 import logging
 import os
-from typing import Dict
+import re
+from typing import Any, Dict, Optional
 
 from openai import OpenAI
 
 logger = logging.getLogger(__name__)
+
+_DEFAULT_MODEL: str = "gpt-4o"
+_JSON_FORMAT: Dict[str, str] = {"type": "json_object"}
+_FALLBACK_HIGHLIGHT: str = "总结生成中..."
+
+
+def _call_chat_completion(
+    client: OpenAI,
+    model_name: str,
+    system_prompt: str,
+    user_prompt: str,
+    use_json_mode: bool,
+) -> str:
+    """Call the chat completion API and return the response text."""
+    kwargs: Dict[str, Any] = {
+        "model": model_name,
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ],
+        "temperature": 0.3,
+        "max_tokens": 2000,
+    }
+    if use_json_mode:
+        kwargs["response_format"] = _JSON_FORMAT
+
+    response = client.chat.completions.create(**kwargs)
+    return response.choices[0].message.content.strip()
+
+
+def extract_json_dict_from_content(
+    content: str,
+) -> Optional[Dict[str, Any]]:
+    """Extract a JSON object dictionary from raw LLM response text.
+
+    Handles markdown code fences and prose surrounding the JSON object
+    so partially non-conforming model output can still be recovered.
+
+    Parameters
+    ----------
+    content : str
+        Raw text returned by the LLM.
+
+    Returns
+    -------
+    Optional[Dict[str, Any]]
+        Parsed JSON object, or None if no valid object is found.
+    """
+    stripped = content.strip()
+    if stripped.startswith("```"):
+        stripped = re.sub(r"^```[a-zA-Z]*\s*", "", stripped)
+        stripped = re.sub(r"\s*```$", "", stripped).strip()
+
+    try:
+        parsed = json.loads(stripped, strict=False)
+    except json.JSONDecodeError:
+        parsed = None
+    if isinstance(parsed, dict):
+        return parsed
+
+    start = stripped.find("{")
+    end = stripped.rfind("}")
+    if start != -1 and end > start:
+        candidate = stripped[start : end + 1]
+        try:
+            parsed = json.loads(candidate, strict=False)
+        except json.JSONDecodeError:
+            return None
+        if isinstance(parsed, dict):
+            return parsed
+    return None
+
+
+def _render_highlights_text(highlights: Any) -> str:
+    """Convert a highlights value from JSON into a display string."""
+    if isinstance(highlights, list):
+        items = [
+            str(item).strip()
+            for item in highlights
+            if str(item).strip()
+        ]
+        if items:
+            return "; ".join(items)
+        return _FALLBACK_HIGHLIGHT
+    if isinstance(highlights, str) and highlights.strip():
+        return highlights.strip()
+    return _FALLBACK_HIGHLIGHT
+
+
+def parse_summary_from_content(
+    content: str,
+    fallback_title: str,
+    fallback_abstract: str,
+) -> Dict[str, str]:
+    """Parse a structured summary from raw LLM response text.
+
+    Tries JSON object extraction first, then pipe-delimited parsing,
+    then newline-based parsing as a last resort.
+
+    Parameters
+    ----------
+    content : str
+        Raw text returned by the LLM.
+    fallback_title : str
+        Original title used when parsing cannot find a title.
+    fallback_abstract : str
+        Original abstract used when parsing cannot find an abstract.
+
+    Returns
+    -------
+    Dict[str, str]
+        Dictionary with keys: chinese_title, chinese_abstract, highlights.
+    """
+    parsed = extract_json_dict_from_content(content)
+    if parsed:
+        return {
+            "chinese_title": str(
+                parsed.get("chinese_title") or fallback_title
+            ).strip(),
+            "chinese_abstract": str(
+                parsed.get("chinese_abstract") or fallback_abstract
+            ).strip(),
+            "highlights": _render_highlights_text(
+                parsed.get("highlights")
+            ),
+        }
+
+    parts = [part.strip() for part in content.split("|")]
+    if len(parts) >= 3:
+        return {
+            "chinese_title": parts[0],
+            "chinese_abstract": parts[1],
+            "highlights": parts[2],
+        }
+
+    lines = [
+        line.strip() for line in content.split("\n") if line.strip()
+    ]
+    return {
+        "chinese_title": lines[0] if lines else fallback_title,
+        "chinese_abstract": (
+            "\n".join(lines[1:-1]) if len(lines) > 2 else fallback_abstract
+        ),
+        "highlights": (
+            lines[-1] if len(lines) > 1 else _FALLBACK_HIGHLIGHT
+        ),
+    }
 
 
 def summarize_paper_via_llm(
@@ -18,8 +167,9 @@ def summarize_paper_via_llm(
     """Translate and summarize a paper abstract using an LLM.
 
     Uses standard terminology from computational chemistry and
-    theoretical chemistry. Returns Chinese title, abstract, and
-    highlight bullet points.
+    theoretical chemistry. Requests a strict JSON object so the
+    three fields can be parsed reliably, and falls back to
+    pipe-delimited or newline parsing when JSON is not available.
 
     Parameters
     ----------
@@ -68,54 +218,40 @@ def summarize_paper_via_llm(
         "calculation, coarse-grained model, force field parameterization, "
         "neural network potential (NNP), reaction path, ensemble average, "
         "etc.\n"
-        "6. Output format must strictly use \"|\" as delimiter."
+        "6. Return only a single valid JSON object with exactly these "
+        "keys: chinese_title (string), chinese_abstract (string), "
+        "highlights (array of 3-5 strings). Do not add any text outside "
+        "the JSON object."
     )
 
     user_prompt = (
         f"Paper Title: {title}\n\n"
         f"Paper Abstract: {abstract}\n\n"
-        f"Output format (STRICTLY use \"|\" as delimiter):\n"
-        f"Chinese Title | Chinese Abstract | Highlight1; Highlight2; "
-        f"Highlight3"
+        "Return the JSON object in this shape:\n"
+        '{"chinese_title": "...", "chinese_abstract": "...", '
+        '"highlights": ["...", "...", "..."]}'
     )
 
+    model_name = model if model else _DEFAULT_MODEL
     try:
-        model_name = model if model else "gpt-4o"
-        response = client.chat.completions.create(
-            model=model_name,
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt},
-            ],
-            temperature=0.3,
-            max_tokens=2000,
+        content = _call_chat_completion(
+            client, model_name, system_prompt, user_prompt, True
         )
-
-        content = response.choices[0].message.content.strip()
-        parts = content.split("|")
-
-        if len(parts) >= 3:
+    except Exception as first_error:
+        logger.warning(
+            f"JSON-mode LLM call failed, retrying without it: "
+            f"{first_error}"
+        )
+        try:
+            content = _call_chat_completion(
+                client, model_name, system_prompt, user_prompt, False
+            )
+        except Exception as e:
+            logger.error(f"LLM call failed: {e}")
             return {
-                "chinese_title": parts[0].strip(),
-                "chinese_abstract": parts[1].strip(),
-                "highlights": parts[2].strip(),
+                "chinese_title": title,
+                "chinese_abstract": abstract,
+                "highlights": f"（LLM 翻译失败: {str(e)[:50]}）",
             }
 
-        lines = [
-            line.strip() for line in content.split("\n") if line.strip()
-        ]
-        return {
-            "chinese_title": lines[0] if lines else title,
-            "chinese_abstract": (
-                "\n".join(lines[1:-1]) if len(lines) > 2 else abstract
-            ),
-            "highlights": lines[-1] if len(lines) > 1 else "总结生成中...",
-        }
-
-    except Exception as e:
-        logger.error(f"LLM call failed: {e}")
-        return {
-            "chinese_title": title,
-            "chinese_abstract": abstract,
-            "highlights": f"（LLM 翻译失败: {str(e)[:50]}）",
-        }
+    return parse_summary_from_content(content, title, abstract)
