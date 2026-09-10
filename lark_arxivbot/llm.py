@@ -6,15 +6,21 @@ import json
 import logging
 import os
 import re
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, Tuple
 
 from openai import OpenAI
+from partialjson import JSONParser
 
 logger = logging.getLogger(__name__)
 
 _DEFAULT_MODEL: str = "gpt-4o"
 _JSON_FORMAT: Dict[str, str] = {"type": "json_object"}
 _FALLBACK_HIGHLIGHT: str = "总结生成中..."
+_MAX_TOKENS: int = 4000
+_TRUNCATION_RETRY_MULTIPLIER: int = 2
+_LOG_SNIPPET_LIMIT: int = 500
+
+_JSON_PARSER = JSONParser()
 
 
 def _call_chat_completion(
@@ -23,8 +29,31 @@ def _call_chat_completion(
     system_prompt: str,
     user_prompt: str,
     use_json_mode: bool,
-) -> str:
-    """Call the chat completion API and return the response text."""
+    max_tokens: int,
+) -> Tuple[str, Optional[str]]:
+    """Call the chat completion API and return text and finish reason.
+
+    Parameters
+    ----------
+    client : OpenAI
+        Configured OpenAI client.
+    model_name : str
+        Model identifier to request.
+    system_prompt : str
+        System message content.
+    user_prompt : str
+        User message content.
+    use_json_mode : bool
+        Whether to request the JSON object response format.
+    max_tokens : int
+        Maximum number of completion tokens.
+
+    Returns
+    -------
+    Tuple[str, Optional[str]]
+        Stripped response text and the finish reason (e.g. "stop"
+        or "length"), or None when the provider omits it.
+    """
     kwargs: Dict[str, Any] = {
         "model": model_name,
         "messages": [
@@ -32,13 +61,42 @@ def _call_chat_completion(
             {"role": "user", "content": user_prompt},
         ],
         "temperature": 0.3,
-        "max_tokens": 2000,
+        "max_tokens": max_tokens,
     }
     if use_json_mode:
         kwargs["response_format"] = _JSON_FORMAT
 
     response = client.chat.completions.create(**kwargs)
-    return response.choices[0].message.content.strip()
+    choice = response.choices[0]
+    content = choice.message.content or ""
+    return content.strip(), choice.finish_reason
+
+
+def recover_dict_from_truncated_json(
+    content: str,
+) -> Optional[Dict[str, Any]]:
+    """Recover a dictionary from truncated or malformed JSON text.
+
+    Uses partialjson to close unclosed strings, arrays, and objects,
+    so a response cut off by a token limit still yields the fields
+    that were fully generated before the cut.
+
+    Parameters
+    ----------
+    content : str
+        Raw or partially truncated JSON text.
+
+    Returns
+    -------
+    Optional[Dict[str, Any]]
+        Recovered dictionary, or None when content is not
+        recoverable as an object.
+    """
+    try:
+        parsed = _JSON_PARSER.parse(content)
+    except Exception:
+        return None
+    return parsed if isinstance(parsed, dict) else None
 
 
 def extract_json_dict_from_content(
@@ -46,8 +104,9 @@ def extract_json_dict_from_content(
 ) -> Optional[Dict[str, Any]]:
     """Extract a JSON object dictionary from raw LLM response text.
 
-    Handles markdown code fences and prose surrounding the JSON object
-    so partially non-conforming model output can still be recovered.
+    Handles markdown code fences and prose surrounding the JSON
+    object, then falls back to partial-JSON recovery so truncated
+    output can still be parsed.
 
     Parameters
     ----------
@@ -71,6 +130,7 @@ def extract_json_dict_from_content(
     if isinstance(parsed, dict):
         return parsed
 
+    candidate: Optional[str] = None
     start = stripped.find("{")
     end = stripped.rfind("}")
     if start != -1 and end > start:
@@ -78,10 +138,22 @@ def extract_json_dict_from_content(
         try:
             parsed = json.loads(candidate, strict=False)
         except json.JSONDecodeError:
-            return None
+            parsed = None
         if isinstance(parsed, dict):
             return parsed
+
+    recovered = recover_dict_from_truncated_json(stripped)
+    if recovered is not None:
+        return recovered
+    if candidate is not None:
+        return recover_dict_from_truncated_json(candidate)
     return None
+
+
+def _looks_like_json_object(content: str) -> bool:
+    """Report whether text appears to be an attempted JSON object."""
+    stripped = content.strip()
+    return stripped.startswith("{") or '"chinese_title"' in stripped
 
 
 def _render_highlights_text(highlights: Any) -> str:
@@ -107,8 +179,11 @@ def parse_summary_from_content(
 ) -> Dict[str, str]:
     """Parse a structured summary from raw LLM response text.
 
-    Tries JSON object extraction first, then pipe-delimited parsing,
-    then newline-based parsing as a last resort.
+    Tries JSON object extraction first (including truncated JSON
+    recovery), then pipe-delimited parsing, then newline-based
+    parsing as a last resort. When the output resembles JSON but
+    cannot be parsed at all, the original English title and abstract
+    are returned instead of leaking raw JSON into the card.
 
     Parameters
     ----------
@@ -126,6 +201,16 @@ def parse_summary_from_content(
     """
     parsed = extract_json_dict_from_content(content)
     if parsed:
+        missing = [
+            key
+            for key in ("chinese_title", "chinese_abstract")
+            if not str(parsed.get(key) or "").strip()
+        ]
+        if missing:
+            logger.warning(
+                f"LLM JSON output missing fields {missing}, using "
+                f"original text for them"
+            )
         return {
             "chinese_title": str(
                 parsed.get("chinese_title") or fallback_title
@@ -136,6 +221,18 @@ def parse_summary_from_content(
             "highlights": _render_highlights_text(
                 parsed.get("highlights")
             ),
+        }
+
+    if _looks_like_json_object(content):
+        snippet = content.strip()[:_LOG_SNIPPET_LIMIT]
+        logger.error(
+            "LLM output resembles JSON but could not be parsed, "
+            f"falling back to original text. Raw output: {snippet}"
+        )
+        return {
+            "chinese_title": fallback_title,
+            "chinese_abstract": fallback_abstract,
+            "highlights": "（LLM 解析失败，请查看运行日志）",
         }
 
     parts = [part.strip() for part in content.split("|")]
@@ -168,8 +265,9 @@ def summarize_paper_via_llm(
 
     Uses standard terminology from computational chemistry and
     theoretical chemistry. Requests a strict JSON object so the
-    three fields can be parsed reliably, and falls back to
-    pipe-delimited or newline parsing when JSON is not available.
+    three fields can be parsed reliably, retries with a larger
+    token budget when the response is truncated, and recovers
+    partial JSON when a truncated response cannot be avoided.
 
     Parameters
     ----------
@@ -234,8 +332,13 @@ def summarize_paper_via_llm(
 
     model_name = model if model else _DEFAULT_MODEL
     try:
-        content = _call_chat_completion(
-            client, model_name, system_prompt, user_prompt, True
+        content, finish_reason = _call_chat_completion(
+            client,
+            model_name,
+            system_prompt,
+            user_prompt,
+            True,
+            _MAX_TOKENS,
         )
     except Exception as first_error:
         logger.warning(
@@ -243,8 +346,13 @@ def summarize_paper_via_llm(
             f"{first_error}"
         )
         try:
-            content = _call_chat_completion(
-                client, model_name, system_prompt, user_prompt, False
+            content, finish_reason = _call_chat_completion(
+                client,
+                model_name,
+                system_prompt,
+                user_prompt,
+                False,
+                _MAX_TOKENS,
             )
         except Exception as e:
             logger.error(f"LLM call failed: {e}")
@@ -253,5 +361,26 @@ def summarize_paper_via_llm(
                 "chinese_abstract": abstract,
                 "highlights": f"（LLM 翻译失败: {str(e)[:50]}）",
             }
+
+    if finish_reason == "length":
+        retry_tokens = _MAX_TOKENS * _TRUNCATION_RETRY_MULTIPLIER
+        logger.warning(
+            "LLM response was truncated (finish_reason=length), "
+            f"retrying with max_tokens={retry_tokens}"
+        )
+        try:
+            content, _ = _call_chat_completion(
+                client,
+                model_name,
+                system_prompt,
+                user_prompt,
+                True,
+                retry_tokens,
+            )
+        except Exception as retry_error:
+            logger.warning(
+                "Truncation retry failed, parsing the truncated "
+                f"response as-is: {retry_error}"
+            )
 
     return parse_summary_from_content(content, title, abstract)
